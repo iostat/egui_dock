@@ -97,4 +97,12 @@ pub trait TabViewer {
     fn scroll_bars(&self, _tab: &Self::Tab) -> [bool; 2] {
         [true, true]
     }
+
+    /// Returns `true` if the tab can be considered a "fixed panel"
+    ///
+    /// If there is only a single fixed panel in a docking area, no tab bar
+    /// will be shown, and the panel thus can't be dragged/moved.
+    fn is_fixed_panel(&self, _tab: &Self::Tab) -> bool {
+        false
+    }
 }

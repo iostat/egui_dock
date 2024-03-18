@@ -27,6 +27,9 @@ impl<'tree, Tab> DockArea<'tree, Tab> {
         fade_style: Option<(&Style, f32)>,
     ) {
         assert!(self.dock_state[surface_index][node_index].is_leaf());
+        let hide_tab_bar = self.dock_state[surface_index][node_index]
+            .iter_tabs()
+            .all(|tab| tab_viewer.is_fixed_panel(tab));
 
         let rect = self.dock_state[surface_index][node_index]
             .rect()
@@ -40,13 +43,17 @@ impl<'tree, Tab> DockArea<'tree, Tab> {
         ui.spacing_mut().item_spacing = Vec2::ZERO;
         ui.set_clip_rect(rect);
 
-        let tabbar_rect = self.tab_bar(
-            ui,
-            state,
-            (surface_index, node_index),
-            tab_viewer,
-            fade_style.map(|(style, _)| style),
-        );
+        let tabbar_rect = if hide_tab_bar {
+            Rect::ZERO
+        } else {
+            self.tab_bar(
+                ui,
+                state,
+                (surface_index, node_index),
+                tab_viewer,
+                fade_style.map(|(style, _)| style),
+            )
+        };
         self.tab_body(
             ui,
             state,

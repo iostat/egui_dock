@@ -187,6 +187,14 @@ impl<'tree, Tab> DockArea<'tree, Tab> {
         let drag_state = state.dnd.as_mut().unwrap();
         let style = self.style.as_ref().unwrap();
 
+        let dst_is_fixed_panel = match drag_state.hover.dst.node_address() {
+            (dst_surf, Some(dst_node)) => self.dock_state[dst_surf][dst_node]
+                .iter_tabs()
+                .all(|tab| tab_viewer.is_fixed_panel(tab)),
+            _ => false,
+        };
+        let insert_allowed = !dst_is_fixed_panel;
+
         let deserted_node = {
             match (
                 drag_state.drag.src.node_address(),
@@ -231,6 +239,7 @@ impl<'tree, Tab> DockArea<'tree, Tab> {
                 ui,
                 style,
                 allowed_splits,
+                insert_allowed,
                 allowed_in_window,
                 window_bounds,
             )
@@ -239,6 +248,7 @@ impl<'tree, Tab> DockArea<'tree, Tab> {
                 ui,
                 style,
                 allowed_splits,
+                insert_allowed,
                 allowed_in_window,
                 window_bounds,
             )

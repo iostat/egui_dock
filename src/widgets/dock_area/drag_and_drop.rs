@@ -138,7 +138,7 @@ enum LockState {
     /// Lock remains locked, but can be unlocked.
     SoftLock,
 
-    /// Lock is locked forever.  
+    /// Lock is locked forever.
     HardLock,
 }
 
@@ -162,6 +162,7 @@ impl DragDropState {
         ui: &Ui,
         style: &Style,
         allowed_splits: AllowedSplits,
+        insert_allowed: bool,
         windows_allowed: bool,
         window_bounds: Rect,
     ) -> Option<TabDestination> {
@@ -188,7 +189,7 @@ impl DragDropState {
         let center = rect.center();
         let rect = Rect::from_center_size(center, Vec2::splat(shortest_side));
 
-        if button_ui(rect, ui, &mut hovering_buttons, pointer, style, None) {
+        if insert_allowed && button_ui(rect, ui, &mut hovering_buttons, pointer, style, None) {
             match self.hover.dst {
                 TreeComponent::Node(surface, node) => {
                     destination = Some(TabDestination::Node(surface, node, TabInsert::Append))
@@ -243,6 +244,7 @@ impl DragDropState {
         ui: &Ui,
         style: &Style,
         allowed_splits: AllowedSplits,
+        insert_allowed: bool,
         windows_allowed: bool,
         window_bounds: Rect,
     ) -> Option<TabDestination> {
@@ -287,10 +289,10 @@ impl DragDropState {
             );
 
             // Find out what kind of tab insertion (if any) should be used to move this widget.
-            if center_drop_rect.contains(a_pos) {
+            if insert_allowed && center_drop_rect.contains(a_pos) {
                 (Some(TabInsert::Append), Rect::EVERYTHING)
             } else if window_drop_rect.contains(a_pos) {
-                match windows_allowed {
+                match windows_allowed || !insert_allowed {
                     true => (None, Rect::NOTHING),
                     false => (Some(TabInsert::Append), Rect::EVERYTHING),
                 }
