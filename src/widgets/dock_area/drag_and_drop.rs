@@ -88,7 +88,7 @@ fn button_ui(
     let visuals = &style.overlay;
     let button_stroke = Stroke::new(1.0, visuals.button_color);
     let painter = ui.painter();
-    painter.rect_stroke(rect, 0.0, visuals.button_border_stroke);
+    painter.rect(rect, 0.0, visuals.button_fill, visuals.button_border_stroke);
     let rect = rect.shrink(rect.width() * 0.1);
     painter.rect_stroke(rect, 0.0, button_stroke);
     let rim = { Rect::from_two_pos(rect.min, rect.lerp_inside(vec2(1.0, 0.1))) };

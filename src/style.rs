@@ -242,6 +242,9 @@ pub struct OverlayStyle {
     /// The color of the overlay buttons.
     pub button_color: Color32,
 
+    /// The background fill color of the overlay buttons.
+    pub button_fill: Color32,
+
     /// The stroke of the button border.
     pub button_border_stroke: Stroke,
 
@@ -427,6 +430,7 @@ impl Default for OverlayStyle {
 
             hovered_leaf_highlight: Default::default(),
             button_color: Color32::from_gray(140),
+            button_fill: Color32::TRANSPARENT,
             button_border_stroke: Stroke::new(1.0, Color32::from_gray(60)),
             overlay_type: OverlayType::Widgets,
             feel: Default::default(),
