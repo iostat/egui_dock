@@ -83,6 +83,7 @@ fn button_ui(
     lock: &mut bool,
     mouse_pos: Pos2,
     style: &Style,
+    allowed_splits: AllowedSplits,
     split: Option<Split>,
 ) -> bool {
     let visuals = &style.overlay;
@@ -94,6 +95,7 @@ fn button_ui(
     let rim = { Rect::from_two_pos(rect.min, rect.lerp_inside(vec2(1.0, 0.1))) };
     painter.rect(rim, 0.0, visuals.button_color, Stroke::NONE);
 
+    // draw dashes
     if let Some(split) = split {
         for line in DASHED_LINE_ALPHAS.chunks(2) {
             let start = rect.lerp_inside(lerp_vec(split, line[0]));
@@ -104,23 +106,33 @@ fn button_ui(
     let is_mouse_over = rect
         .expand(style.overlay.feel.interact_expansion)
         .contains(mouse_pos);
+
+    let vertical_alphas = vec2(1.0, 0.5);
+    let horizontal_alphas = vec2(0.5, 1.0);
+    let rect = match split {
+        Some(Split::Above) => Rect::from_min_size(rect.min, rect.size() * vertical_alphas),
+        Some(Split::Left) => Rect::from_min_size(rect.min, rect.size() * horizontal_alphas),
+        Some(Split::Below) => {
+            let min = rect.lerp_inside(lerp_vec(Split::Below, 0.0));
+            Rect::from_min_size(min, rect.size() * vertical_alphas)
+        }
+        Some(Split::Right) => {
+            let min = rect.lerp_inside(lerp_vec(Split::Right, 0.0));
+            Rect::from_min_size(min, rect.size() * horizontal_alphas)
+        }
+        _ => rect,
+    };
     if is_mouse_over && !*lock {
-        let vertical_alphas = vec2(1.0, 0.5);
-        let horizontal_alphas = vec2(0.5, 1.0);
-        let rect = match split {
-            Some(Split::Above) => Rect::from_min_size(rect.min, rect.size() * vertical_alphas),
-            Some(Split::Left) => Rect::from_min_size(rect.min, rect.size() * horizontal_alphas),
-            Some(Split::Below) => {
-                let min = rect.lerp_inside(lerp_vec(Split::Below, 0.0));
-                Rect::from_min_size(min, rect.size() * vertical_alphas)
-            }
-            Some(Split::Right) => {
-                let min = rect.lerp_inside(lerp_vec(Split::Right, 0.0));
-                Rect::from_min_size(min, rect.size() * horizontal_alphas)
-            }
-            _ => rect,
-        };
         painter.rect_filled(rect, 0.0, style.overlay.selection_color);
+    } else {
+        let base_color = visuals.button_color;
+        let color = egui::Color32::from_rgba_unmultiplied(
+            base_color.r(),
+            base_color.g(),
+            base_color.b(),
+            base_color.a() / 10,
+        );
+        painter.rect_filled(rect, 0.0, color);
     }
     lock.bitor_assign(is_mouse_over);
     is_mouse_over
@@ -189,7 +201,17 @@ impl DragDropState {
         let center = rect.center();
         let rect = Rect::from_center_size(center, Vec2::splat(shortest_side));
 
-        if insert_allowed && button_ui(rect, ui, &mut hovering_buttons, pointer, style, None) {
+        if insert_allowed
+            && button_ui(
+                rect,
+                ui,
+                &mut hovering_buttons,
+                pointer,
+                style,
+                allowed_splits,
+                None,
+            )
+        {
             match self.hover.dst {
                 TreeComponent::Node(surface, node) => {
                     destination = Some(TabDestination::Node(surface, node, TabInsert::Append))
@@ -202,27 +224,23 @@ impl DragDropState {
         }
 
         for split in [Split::Below, Split::Right, Split::Above, Split::Left] {
-            match allowed_splits {
-                AllowedSplits::TopBottomOnly if split.is_top_bottom() => continue,
-                AllowedSplits::LeftRightOnly if split.is_left_right() => continue,
-                AllowedSplits::None => continue,
-                _ => {
-                    if button_ui(
-                        Rect::from_center_size(center + offset_vector, Vec2::splat(shortest_side)),
-                        ui,
-                        &mut hovering_buttons,
-                        pointer,
-                        style,
-                        Some(split),
-                    ) {
-                        if let TreeComponent::Node(surface, node) = self.hover.dst {
-                            destination =
-                                Some(TabDestination::Node(surface, node, TabInsert::Split(split)))
-                        }
+            if allowed_splits.allowed(&split) {
+                if button_ui(
+                    Rect::from_center_size(center + offset_vector, Vec2::splat(shortest_side)),
+                    ui,
+                    &mut hovering_buttons,
+                    pointer,
+                    style,
+                    allowed_splits,
+                    Some(split),
+                ) {
+                    if let TreeComponent::Node(surface, node) = self.hover.dst {
+                        destination =
+                            Some(TabDestination::Node(surface, node, TabInsert::Split(split)))
                     }
-                    offset_vector = offset_vector.rot90();
                 }
             }
+            offset_vector = offset_vector.rot90();
         }
         let hovering_rect = self.hover.rect.contains(pointer);
         let target_lock_state = match (hovering_rect, hovering_buttons) {
@@ -288,47 +306,44 @@ impl DragDropState {
                 Vec2::splat(style.overlay.feel.window_drop_coverage),
             );
 
+            let no_action = (None, Rect::NOTHING);
+
             // Find out what kind of tab insertion (if any) should be used to move this widget.
             if insert_allowed && center_drop_rect.contains(a_pos) {
                 (Some(TabInsert::Append), Rect::EVERYTHING)
             } else if window_drop_rect.contains(a_pos) {
                 match windows_allowed || !insert_allowed {
-                    true => (None, Rect::NOTHING),
+                    true => no_action,
                     false => (Some(TabInsert::Append), Rect::EVERYTHING),
                 }
             } else {
                 // Assessing if were above/below the two linear functions x-y=0 and -x-y=0 determines
                 // what "diagonal" quadrant were in.
-                let a_pos = match allowed_splits {
-                    AllowedSplits::All => a_pos,
-                    AllowedSplits::LeftRightOnly => Pos2::new(a_pos.x, 0.0),
-                    AllowedSplits::TopBottomOnly => Pos2::new(0.0, a_pos.y),
-                    AllowedSplits::None => Pos2::ZERO,
-                };
-                if a_pos == Pos2::ZERO {
+                if allowed_splits.none() {
                     match windows_allowed {
-                        true => (None, Rect::NOTHING),
+                        true => no_action,
                         false => (Some(TabInsert::Append), Rect::EVERYTHING),
                     }
                 } else {
-                    match (a_pos.x - a_pos.y > 0., -a_pos.x - a_pos.y > 0.) {
-                        (true, true) => (
+                    let action = match (a_pos.x - a_pos.y > 0., -a_pos.x - a_pos.y > 0.) {
+                        (true, true) => allowed_splits.top().then_some((
                             Some(TabInsert::Split(Split::Above)),
                             Rect::everything_above(center.y),
-                        ),
-                        (false, true) => (
+                        )),
+                        (false, true) => allowed_splits.left().then_some((
                             Some(TabInsert::Split(Split::Left)),
                             Rect::everything_left_of(center.x),
-                        ),
-                        (true, false) => (
+                        )),
+                        (true, false) => allowed_splits.right().then_some((
                             Some(TabInsert::Split(Split::Right)),
                             Rect::everything_right_of(center.x),
-                        ),
-                        (false, false) => (
+                        )),
+                        (false, false) => allowed_splits.bottom().then_some((
                             Some(TabInsert::Split(Split::Below)),
                             Rect::everything_below(center.y),
-                        ),
-                    }
+                        )),
+                    };
+                    action.unwrap_or(no_action)
                 }
             }
         };

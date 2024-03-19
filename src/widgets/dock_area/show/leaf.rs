@@ -180,7 +180,12 @@ impl<'tree, Tab> DockArea<'tree, Tab> {
             state,
             (surface_index, node_index),
             actual_width,
-            available_width,
+            available_width
+                + if self.show_add_buttons {
+                    Style::TAB_ADD_BUTTON_SIZE
+                } else {
+                    0.
+                },
             &tabbar_response,
             fade_style,
         );

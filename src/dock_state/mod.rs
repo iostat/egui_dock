@@ -16,7 +16,9 @@ pub use window_state::WindowState;
 
 use egui::Rect;
 
-use crate::{Node, NodeIndex, Split, TabDestination, TabIndex, TabInsert, Translations, Tree};
+use crate::{
+    Node, NodeIndex, Split, TabDestination, TabIndex, TabInsert, TabViewer, Translations, Tree,
+};
 
 /// The heart of `egui_dock`.
 ///
@@ -212,6 +214,7 @@ impl<Tab> DockState<Tab> {
     /// You need to specify with [`TabDestination`] how the tab should be moved.
     pub fn move_tab(
         &mut self,
+        tab_viewer: &impl TabViewer<Tab = Tab>,
         (src_surface, src_node, src_tab): (SurfaceIndex, NodeIndex, TabIndex),
         dst_tab: impl Into<TabDestination>,
     ) {
@@ -233,7 +236,20 @@ impl<Tab> DockState<Tab> {
                 let tab = self[src_surface][src_node].remove_tab(src_tab).unwrap();
                 match dst_tab {
                     TabInsert::Split(split) => {
-                        self[dst_surface].split(dst_node, split, 0.5, Node::leaf(tab));
+                        // semantics of compute_split_fraction are relative to the existing node, so if we're splitting above or left
+                        // the existing tab effectively becomes the "child"
+                        let fraction = tab_viewer.compute_split_fraction(
+                            &split,
+                            self[dst_surface][dst_node].tabs(),
+                            &tab,
+                        );
+                        let fraction = if matches!(split, Split::Above | Split::Left) {
+                            1. - fraction
+                        } else {
+                            fraction
+                        };
+                        println!("final split frac: {fraction}\n  * src=({src_surface:?},{src_node:?}) dst=({dst_surface:?},{dst_node:?})");
+                        self[dst_surface].split(dst_node, split, fraction, Node::leaf(tab));
                     }
 
                     TabInsert::Insert(index) => self[dst_surface][dst_node].insert_tab(index, tab),

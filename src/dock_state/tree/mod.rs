@@ -490,6 +490,7 @@ impl<Tab> Tree<Tab> {
 
         // If the node were splitting is a parent, all it's children need to be moved.
         if old.is_parent() {
+            println!("old is parent");
             let levels_to_move = NodeIndex(self.nodes.len()).level() - index[0].level();
 
             // Level 0 is ourself, which is done when we assign self[index[0]] = old, so start at 1.
@@ -514,6 +515,8 @@ impl<Tab> Tree<Tab> {
                 };
                 old_range.swap_with_slice(new_range);
             }
+        } else {
+            println!("old is NOT parent");
         }
 
         self[index[0]] = old;

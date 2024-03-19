@@ -12,7 +12,7 @@ use crate::{
     TabViewer,
 };
 
-use super::{drag_and_drop::TreeComponent, state::State, tab_removal::TabRemoval};
+use super::{allowed_splits, drag_and_drop::TreeComponent, state::State, tab_removal::TabRemoval};
 
 mod leaf;
 mod main_surface;
@@ -148,7 +148,7 @@ impl<'tree, Tab> DockArea<'tree, Tab> {
                     }
                 };
                 if let Some(destination) = tab_dst {
-                    self.dock_state.move_tab(source, destination);
+                    self.dock_state.move_tab(tab_viewer, source, destination);
                 }
                 state.reset_drag();
             }
@@ -210,12 +210,30 @@ impl<'tree, Tab> DockArea<'tree, Tab> {
         };
 
         // Not all scenarios can house all splits.
-        let restricted_splits = if drag_state.hover.dst.is_surface() || deserted_node {
-            AllowedSplits::None
+        let allowed_splits = if drag_state.hover.dst.is_surface() || deserted_node {
+            AllowedSplits::NONE
         } else {
-            AllowedSplits::All
+            match drag_state.drag.src {
+                TreeComponent::Tab(src_surface, src_node, src_tab) => {
+                    let Node::Leaf { tabs, .. } = &self.dock_state[src_surface][src_node] else {
+                        unreachable!("tab drags can only come from leaf nodes")
+                    };
+                    let incoming = &tabs[src_tab.0];
+
+                    match drag_state.hover.dst {
+                        TreeComponent::Surface(_) => self.allowed_splits,
+                        TreeComponent::Node(dst_surface, dst_node)
+                        | TreeComponent::Tab(dst_surface, dst_node, _) => tab_viewer
+                            .allowed_split_override(
+                                self.dock_state[dst_surface][dst_node].tabs(),
+                                incoming,
+                            )
+                            .unwrap_or(self.allowed_splits),
+                    }
+                }
+                _ => todo!("collections of tabs, like nodes or surfaces, can't be dragged! (yet)"),
+            }
         };
-        let allowed_splits = self.allowed_splits & restricted_splits;
 
         let allowed_in_window = match drag_state.drag.src {
             TreeComponent::Tab(surface, node, tab) => {

@@ -1,4 +1,4 @@
-use crate::{NodeIndex, SurfaceIndex, TabStyle};
+use crate::{AllowedSplits, NodeIndex, Split, SurfaceIndex, TabIter, TabStyle};
 use egui::{Id, Ui, WidgetText};
 
 /// Defines how a tab should behave and be rendered inside a [`Tree`](crate::Tree).
@@ -104,5 +104,28 @@ pub trait TabViewer {
     /// will be shown, and the panel thus can't be dragged/moved.
     fn is_fixed_panel(&self, _tab: &Self::Tab) -> bool {
         false
+    }
+
+    /// When a tab area is being split, compute the fraction of the area the existing tab should keep
+    ///
+    /// The default behavior is to split the area in half (0.5)
+    fn compute_split_fraction(
+        &self,
+        _direction: &Split,
+        _existing: Option<&[Self::Tab]>,
+        _incoming: &Self::Tab,
+    ) -> f32 {
+        0.5
+    }
+
+    /// Overrides allowed splits when dragging/dropping. Returning None defaults to the DockArea settings.
+    ///
+    /// Returns `None` by default.
+    fn allowed_split_override(
+        &self,
+        _existing: Option<&[Self::Tab]>,
+        _incoming: &Self::Tab,
+    ) -> Option<AllowedSplits> {
+        None
     }
 }
