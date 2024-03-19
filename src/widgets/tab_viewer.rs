@@ -1,4 +1,4 @@
-use crate::{AllowedSplits, NodeIndex, Split, SurfaceIndex, TabIter, TabStyle};
+use crate::{AllowedSplits, NodeIndex, Split, SurfaceIndex, TabStyle};
 use egui::{Id, Ui, WidgetText};
 
 /// Defines how a tab should behave and be rendered inside a [`Tree`](crate::Tree).

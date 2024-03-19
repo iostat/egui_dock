@@ -12,7 +12,7 @@ use crate::{
     TabViewer,
 };
 
-use super::{allowed_splits, drag_and_drop::TreeComponent, state::State, tab_removal::TabRemoval};
+use super::{drag_and_drop::TreeComponent, state::State, tab_removal::TabRemoval};
 
 mod leaf;
 mod main_surface;

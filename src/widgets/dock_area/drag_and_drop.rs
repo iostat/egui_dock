@@ -83,7 +83,6 @@ fn button_ui(
     lock: &mut bool,
     mouse_pos: Pos2,
     style: &Style,
-    allowed_splits: AllowedSplits,
     split: Option<Split>,
 ) -> bool {
     let visuals = &style.overlay;
@@ -201,17 +200,7 @@ impl DragDropState {
         let center = rect.center();
         let rect = Rect::from_center_size(center, Vec2::splat(shortest_side));
 
-        if insert_allowed
-            && button_ui(
-                rect,
-                ui,
-                &mut hovering_buttons,
-                pointer,
-                style,
-                allowed_splits,
-                None,
-            )
-        {
+        if insert_allowed && button_ui(rect, ui, &mut hovering_buttons, pointer, style, None) {
             match self.hover.dst {
                 TreeComponent::Node(surface, node) => {
                     destination = Some(TabDestination::Node(surface, node, TabInsert::Append))
@@ -231,7 +220,6 @@ impl DragDropState {
                     &mut hovering_buttons,
                     pointer,
                     style,
-                    allowed_splits,
                     Some(split),
                 ) {
                     if let TreeComponent::Node(surface, node) = self.hover.dst {
