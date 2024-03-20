@@ -161,22 +161,42 @@ impl MyContext {
                 &mut self.show_window_collapse,
                 "Show collaspse button on windows",
             );
-            ComboBox::new("cbox:allowed_splits", "Split direction(s)")
-                .selected_text(format!("{:?}", self.allowed_splits))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.allowed_splits, AllowedSplits::All, "All");
-                    ui.selectable_value(
-                        &mut self.allowed_splits,
-                        AllowedSplits::LeftRightOnly,
-                        "LeftRightOnly",
-                    );
-                    ui.selectable_value(
-                        &mut self.allowed_splits,
-                        AllowedSplits::TopBottomOnly,
-                        "TopBottomOnly",
-                    );
-                    ui.selectable_value(&mut self.allowed_splits, AllowedSplits::None, "None");
-                });
+            ui.horizontal(|ui| {
+                let mut curr_all = self.allowed_splits.all();
+                let mut curr_none = self.allowed_splits.none();
+                let mut curr_top = self.allowed_splits.top();
+                let mut curr_bot = self.allowed_splits.bottom();
+                let mut curr_left = self.allowed_splits.left();
+                let mut curr_right = self.allowed_splits.right();
+                ui.label("Split direction(s)");
+                ui.checkbox(&mut curr_all, "All");
+                ui.checkbox(&mut curr_none, "None");
+                ui.checkbox(&mut curr_top, "Top");
+                ui.checkbox(&mut curr_bot, "Bottom");
+                ui.checkbox(&mut curr_left, "Left");
+                ui.checkbox(&mut curr_right, "Right");
+
+                self.allowed_splits = if curr_all && !self.allowed_splits.all() {
+                    AllowedSplits::ALL
+                } else if curr_none && !self.allowed_splits.none() {
+                    AllowedSplits::NONE
+                } else {
+                    let mut splits = AllowedSplits::NONE;
+                    if curr_top {
+                        splits |= AllowedSplits::TOP
+                    }
+                    if curr_bot {
+                        splits |= AllowedSplits::BOTTOM
+                    }
+                    if curr_left {
+                        splits |= AllowedSplits::LEFT
+                    }
+                    if curr_right {
+                        splits |= AllowedSplits::RIGHT
+                    }
+                    splits
+                }
+            });
         });
 
         let style = self.style.as_mut().unwrap();
